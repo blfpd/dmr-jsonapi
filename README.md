@@ -2,7 +2,7 @@
 
 *[JSON:API](https://jsonapi.org/) support for [django-modern-rest](https://github.com/wemake-services/django-modern-rest).*
 
-[![Tests Result](https://github.com/blfpd/dmr-jsonapi/actions/workflows/test.yml/badge.svg?event=push)](https://github.com/blfpd/dmr-jsonapi/actions/workflows/test.yml)
+[![Tests Result](https://github.com/blfpd/dmr-jsonapi/actions/workflows/test.yaml/badge.svg?event=push)](https://github.com/blfpd/dmr-jsonapi/actions/workflows/test.yaml)
 [![PyPI](https://img.shields.io/pypi/v/dmr-jsonapi.svg)](https://pypi.org/project/dmr-jsonapi/)
 [![Supported Python Version](https://img.shields.io/pypi/pyversions/dmr-jsonapi.svg)](https://pypi.org/project/dmr-jsonapi/)
 [![Code Style](https://img.shields.io/badge/style-wemake-000000.svg)](https://github.com/wemake-services/wemake-python-styleguide)

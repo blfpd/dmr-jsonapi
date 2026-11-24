@@ -84,13 +84,13 @@ when a GitHub release is created.
 2. Run `just release <version>` from an up to date `main` branch.
    It checks that tests are green for the commit,
    then creates the `v<version>` tag and a GitHub release with notes
-3. `publish.yml` runs the tests once again, builds the package,
+3. `publish.yaml` runs the tests once again, builds the package,
    and publishes it using
    [trusted publishing](https://docs.pypi.org/trusted-publishers/)
 
 One time setup for a new project:
 
 - On PyPI, add a pending publisher for `dmr-jsonapi`:
-  repository `blfpd/dmr-jsonapi`, workflow `publish.yml`,
+  repository `blfpd/dmr-jsonapi`, workflow `publish.yaml`,
   environment `pypi`
 - On GitHub, create the `pypi` environment in the repository settings

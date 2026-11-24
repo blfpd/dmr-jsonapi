@@ -114,7 +114,7 @@ release version:
     fi
 
     # Never release a commit that did not pass the tests:
-    conclusion="$(gh run list --workflow test.yml --branch main \
+    conclusion="$(gh run list --workflow test.yaml --branch main \
       --commit "$sha" --json conclusion --jq '.[0].conclusion')"
     if [[ "$conclusion" != 'success' ]]; then
       echo "Tests for $sha did not succeed (status: ${conclusion:-none})" >&2
@@ -128,6 +128,6 @@ release version:
     fi
 
     # This creates the tag and the release,
-    # `publish.yml` starts when the release is published:
+    # `publish.yaml` starts when the release is published:
     gh release create "$tag" --target "$sha" --title "$tag" \
       --generate-notes ${prerelease[@]+"${prerelease[@]}"}

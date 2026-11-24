@@ -1,7 +1,7 @@
 rules:
   secrets-outside-env:
     disable: true
-  # `publish.yml` reuses `test.yml` with the classic `./` syntax,
+  # `publish.yaml` reuses `test.yaml` with the classic `./` syntax,
   # it works everywhere, including GitHub Enterprise Server.
   self-repository:
     disable: true
