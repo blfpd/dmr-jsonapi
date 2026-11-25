@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from typing import Any
 
+import msgspec
 import pytest
 from django.conf import LazySettings
 from dmr.errors import ErrorType
@@ -186,6 +187,57 @@ def test_format_validation_error() -> None:
             'Oops - at `$.parsed_query.page`',
             {'detail': 'Oops', 'source': {'parameter': 'page'}},
         ),
+        # Field names can contain brackets, even with dots inside:
+        (
+            'Expected `int`, got `str` - at `$.parsed_query.page[size]`',
+            {
+                'detail': 'Expected `int`, got `str`',
+                'source': {'parameter': 'page[size]'},
+            },
+        ),
+        (
+            'Oops - at `$.parsed_query.filter[a.b]`',
+            {'detail': 'Oops', 'source': {'parameter': 'filter[a.b]'}},
+        ),
+        (
+            'Oops - at `$.parsed_body.meta[x][y][2].z`',
+            {'detail': 'Oops', 'source': {'pointer': '/meta[x][y]/2/z'}},
+        ),
+        # Unknown fields are only in the message:
+        (
+            'Object contains unknown field `sort` - at `$.parsed_query`',
+            {
+                'detail': 'Object contains unknown field `sort`',
+                'source': {'parameter': 'sort'},
+            },
+        ),
+        (
+            'Object contains unknown field `a/b` - at `$.parsed_body.data`',
+            {
+                'detail': 'Object contains unknown field `a/b`',
+                'source': {'pointer': '/data/a~1b'},
+            },
+        ),
+        # We don't know keys of dicts, so we point to the dict itself:
+        (
+            'Expected `int`, got `str` - at `$.parsed_body.meta[...][0]`',
+            {
+                'detail': 'Expected `int`, got `str`',
+                'source': {'pointer': '/meta'},
+            },
+        ),
+        (
+            'Object contains unknown field `x` - at `$.parsed_body[...]`',
+            {
+                'detail': 'Object contains unknown field `x`',
+                'source': {'pointer': ''},
+            },
+        ),
+        # Paths that we don't understand stay in the message:
+        (
+            'Oops - at `$.parsed_body.data]`',
+            {'detail': 'Oops - at `$.parsed_body.data]`'},
+        ),
         (
             'Oops - at `$.parsed_cookies.name`',
             {
@@ -208,6 +260,36 @@ def test_format_msgspec_location(
     assert format_error(exc) == {
         'errors': [{'status': '422', **expected}],
     }
+
+
+class _Query(
+    msgspec.Struct,
+    forbid_unknown_fields=True,
+    rename={'page_size': 'page[size]'},
+):
+    page_size: int = 10
+
+
+class _Request(msgspec.Struct):
+    parsed_query: _Query
+
+
+@pytest.mark.parametrize(
+    ('parsed_query', 'expected'),
+    [
+        ({'page[size]': 'x'}, {'parameter': 'page[size]'}),
+        ({'sort': 'x'}, {'parameter': 'sort'}),
+    ],
+)
+def test_format_real_msgspec_error(
+    parsed_query: dict[str, Any],
+    expected: dict[str, str],
+) -> None:
+    """Ensure that we understand messages that ``msgspec`` really makes."""
+    with pytest.raises(msgspec.ValidationError) as exc_info:
+        msgspec.convert({'parsed_query': parsed_query}, _Request)
+    exc = ValidationError([{'msg': str(exc_info.value)}])
+    assert format_error(exc)['errors'][0].get('source') == expected
 
 
 def test_format_other_exceptions() -> None:

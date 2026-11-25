@@ -3,6 +3,15 @@
 We follow [Semantic Versioning](https://semver.org/).
 Until `1.0.0` minor releases can contain breaking changes.
 
+## 0.1.2
+
+- Fixes `source` of errors from `msgspec` validation:
+  field names with brackets, like `page[size]`, become `source.parameter`
+  or `source.pointer` instead of their parent
+- Unknown fields, like `?sort=`, get their own `source` instead of none
+- Dict keys, shown as `[...]` by `msgspec`, point to the dict
+  instead of a wrong index
+
 ## 0.1.0
 
 Initial release.

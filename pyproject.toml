@@ -5,7 +5,7 @@ requires = [ "hatch-fancy-pypi-readme", "hatchling" ]
 
 [project]
 name = "dmr-jsonapi"
-version = "0.1.1"
+version = "0.1.2"
 description = "JSON:API support for django-modern-rest"
 keywords = [
   "API",
