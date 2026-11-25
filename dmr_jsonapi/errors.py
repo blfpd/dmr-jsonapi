@@ -22,7 +22,19 @@ from dmr_jsonapi.objects import (
 # `msgspec` does not provide a location, but it adds it to the message:
 # Expected `str`, got `int` - at `$.parsed_body.data.attributes[0].name`
 _MSGSPEC_MESSAGE: Final = re.compile(r'^(?P<msg>.*) - at `\$(?P<path>.*)`$')
-_PATH_PART: Final = re.compile(r'\.(?P<key>[^.\[\]]+)|\[(?P<index>\d+)\]')
+# Field names can contain brackets, like `page[size]` or `filter[a.b]`.
+# `[0]` is always an index, `[...]` is a key of a dict that `msgspec`
+# does not name.
+_PATH_PART: Final = re.compile(
+    r'\.(?P<key>[^.\[\]]+(?:\[(?!\d+\]|\.\.\.\])[^\[\]]*\])*)'
+    r'|\[(?P<index>\d+)\]'
+    r'|(?P<dict_key>\[\.\.\.\])',
+)
+# The unknown field is only in the message, the location is its parent:
+# Object contains unknown field `sort` - at `$.parsed_query`
+_UNKNOWN_FIELD: Final = re.compile(
+    r'^Object contains unknown field `(?P<field>.*)`$',
+)
 
 
 def error_object(  # noqa: WPS211
@@ -172,10 +184,7 @@ def _convert_detail(
     message = detail['msg']
     loc: list[str | int] | None = detail.get('loc')
     if loc is None:
-        match = _MSGSPEC_MESSAGE.match(message)
-        if match:
-            message = match.group('msg')
-            loc = _parse_msgspec_path(match.group('path'))
+        message, loc = _msgspec_location(message)
 
     source = source_from_loc(loc) if loc else False
     return error_object(
@@ -189,10 +198,38 @@ def _convert_detail(
     )
 
 
-def _parse_msgspec_path(path: str) -> list[str | int]:
-    return [
-        int(index) if index else key for key, index in _PATH_PART.findall(path)
-    ]
+def _msgspec_location(message: str) -> tuple[str, list[str | int] | None]:
+    match = _MSGSPEC_MESSAGE.match(message)
+    if match is None:
+        return message, None
+    loc, is_complete = _parse_msgspec_path(match.group('path'))
+    if loc is None:
+        # Better to keep the location in the message than to lose it:
+        return message, None
+    unknown = _UNKNOWN_FIELD.match(match.group('msg'))
+    if unknown and is_complete:
+        loc.append(unknown.group('field'))
+    return match.group('msg'), loc
+
+
+def _parse_msgspec_path(path: str) -> tuple[list[str | int] | None, bool]:
+    """
+    Parse a path, it is not complete when it contains a key of a dict.
+
+    We stop at the dict itself then, since we can't point any deeper.
+    """
+    loc: list[str | int] = []
+    position = 0
+    while position < len(path):
+        part = _PATH_PART.match(path, position)
+        if part is None:
+            return None, False
+        if part.group('dict_key'):
+            return loc, False
+        key, index = part.group('key', 'index')
+        loc.append(key if index is None else int(index))
+        position = part.end()
+    return loc, True
 
 
 def _to_pointer(path: Sequence[str | int]) -> str:
